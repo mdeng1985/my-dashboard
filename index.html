@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>个人驾驶舱 (可编辑版)</title>
+    <title>个人驾驶舱 (多工作区版)</title>
     <style>
         /* 基础样式 */
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; color: #333; }
@@ -15,43 +15,75 @@
         .link-category { margin-bottom: 25px; }
         .link-category h2 { font-size: 16px; color: #5f6368; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
         .sidebar ul { list-style: none; padding: 0; margin: 0; }
-        .sidebar li { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
-        .sidebar a { text-decoration: none; color: #3c4043; display: block; padding: 8px 12px; border-radius: 8px; transition: background-color 0.2s ease, color 0.2s ease; font-size: 14px; flex-grow: 1; }
+        .sidebar li { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; transition: background-color 0.2s; }
+        .sidebar a { text-decoration: none; color: #3c4043; display: block; padding: 8px 12px; border-radius: 8px 0 0 8px; transition: background-color 0.2s ease, color 0.2s ease; font-size: 14px; flex-grow: 1; }
         .sidebar a:hover, .sidebar a.active { background-color: #e8f0fe; color: #1967d2; }
         .sidebar a .external-icon { display: inline-block; margin-left: 4px; font-size: 12px; color: #888; transform: translateY(-1px); }
-        .content { flex-grow: 1; display: flex; flex-direction: column; }
+        .content { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
         iframe { flex-grow: 1; border: none; width: 100%; height: 100%; background-color: #fff; }
         .loading { padding: 20px; color: #999; }
 
+        /* 工作区切换 */
+        .workspace-switcher { margin-top: 10px; }
+        .workspace-switcher label { font-size: 12px; color: #5f6368; margin-right: 10px; }
+        .workspace-switcher select { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; }
+        .workspace-controls { display: none; margin-left: 10px; }
+        .edit-mode .workspace-controls { display: inline-block; }
+        .workspace-controls button { font-size: 12px; padding: 4px 6px; margin-left: 5px; }
+
         /* 编辑模式下的样式 */
-        .edit-controls { display: none; align-items: center; }
+        .edit-controls { display: none; align-items: center; padding-right: 5px; }
         .edit-mode .edit-controls { display: flex; }
-        .delete-btn { cursor: pointer; padding: 4px; font-size: 16px; color: #c5221f; border: none; background: none; opacity: 0.6; }
-        .delete-btn:hover { opacity: 1; }
-        .toggle-switch { position: relative; display: inline-block; width: 34px; height: 20px; margin: 0 8px; }
+        .control-btn { cursor: pointer; padding: 4px; font-size: 16px; border: none; background: none; opacity: 0.6; }
+        .control-btn:hover { opacity: 1; }
+        .delete-btn { color: #c5221f; }
+        .edit-btn { color: #1a73e8; }
+        .drag-handle { cursor: grab; padding: 0 8px; opacity: 0.2; }
+        .edit-mode li:hover .drag-handle { opacity: 0.6; }
+        .toggle-switch { position: relative; display: inline-block; width: 34px; height: 20px; margin: 0 4px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #2196F3; }
         input:checked + .slider:before { transform: translateX(14px); }
+        
+        /* 拖拽样式 */
+        .dragging { opacity: 0.5; background: #e8f0fe; }
+        .drag-over { border-top: 2px dashed #1a73e8; }
 
-        /* 添加链接表单 */
+        /* 添加/编辑链接表单 */
         #add-link-form { display: none; background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 20px; }
         .form-group { margin-bottom: 10px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 12px; color: #5f6368; }
-        .form-group input { width: calc(100% - 16px); padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-group input, .form-group select { width: calc(100% - 18px); padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        #new-category-input { display: none; margin-top: 10px; }
         .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
         .form-buttons button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }
-        #save-link-btn { background-color: #1a73e8; color: white; }
-        #cancel-add-btn { background-color: #eee; }
+        .save-btn { background-color: #1a73e8; color: white; }
+        .cancel-btn { background-color: #eee; }
 
         /* 底部按钮区 */
         .sidebar-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;}
-        .data-management { display: flex; gap: 10px; margin-bottom: 10px; }
-        .data-management button { flex-grow: 1; padding: 8px; background-color: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .data-management { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .data-management button { width: 100%; padding: 8px; background-color: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .data-management button:hover { background-color: #e0e0e0; }
         #edit-mode-toggle { width: 100%; padding: 8px; background-color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; }
         #edit-mode-toggle.active { background-color: #ffc107; }
+
+        /* 项目启动器样式 */
+        #project-launcher { display: none; position: absolute; top: 10px; right: 10px; z-index: 100; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 15px; width: 350px; border: 1px solid #eee; max-height: calc(100vh - 40px); overflow-y: auto; }
+        #project-launcher.visible { display: block; }
+        #project-launcher h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .project-item { margin-bottom: 15px; border: 1px solid #f0f0f0; padding: 10px; border-radius: 6px; }
+        .project-item .project-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .project-item .project-header input { font-size: 14px; font-weight: bold; border: none; border-bottom: 1px dashed #ccc; flex-grow: 1; }
+        .path-group { display: flex; align-items: center; margin-bottom: 5px; }
+        .path-group span { font-size: 12px; color: #666; margin-right: 8px; min-width: 30px; }
+        .path-group input { flex-grow: 1; font-size: 12px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; }
+        .path-group button { margin-left: 5px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
+        #add-project-btn { width: 100%; margin-top: 10px; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        #private-mode-toggle { position: absolute; top: 50%; transform: translateY(-50%); left: 0; z-index: 101; background: #fff; border: 1px solid #ccc; border-left: none; writing-mode: vertical-rl; text-orientation: mixed; padding: 8px 4px; border-radius: 0 8px 8px 0; cursor: pointer; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
@@ -61,6 +93,15 @@
         <div id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <h1>我的驾驶舱</h1>
+                <div class="workspace-switcher">
+                    <label for="workspace-select">工作区:</label>
+                    <select id="workspace-select"></select>
+                    <span class="workspace-controls">
+                        <button id="add-workspace-btn" title="添加新工作区">+</button>
+                        <button id="rename-workspace-btn" title="重命名当前工作区">✏️</button>
+                        <button id="delete-workspace-btn" title="删除当前工作区">🗑️</button>
+                    </span>
+                </div>
             </div>
             <div id="link-container" class="sidebar-content">
                 <div class="loading">正在加载链接...</div>
@@ -77,17 +118,20 @@
                         <input type="url" id="link-url" required>
                     </div>
                     <div class="form-group">
-                        <label for="link-category">分类</label>
-                        <input type="text" id="link-category" required placeholder="输入现有或新的分类名">
+                        <label for="link-category-select">分类</label>
+                        <select id="link-category-select"></select>
+                        <input type="text" id="new-category-input" placeholder="输入新分类名称">
                     </div>
                     <div class="form-buttons">
-                        <button type="button" id="cancel-add-btn">取消</button>
-                        <button type="submit" id="save-link-btn">保存</button>
+                        <button type="button" id="cancel-add-btn" class="cancel-btn">取消</button>
+                        <button type="submit" class="save-btn">保存</button>
                     </div>
                 </form>
                 <div class="data-management">
-                    <button id="import-btn">导入配置</button>
-                    <button id="export-btn">导出配置</button>
+                    <button id="import-btn">从文件导入</button>
+                    <button id="export-btn">导出到文件</button>
+                    <button id="import-text-btn">从文本导入</button>
+                    <button id="export-text-btn">复制到剪贴板</button>
                     <input type="file" id="import-file" accept=".json" style="display: none;">
                 </div>
                 <button id="edit-mode-toggle">进入编辑模式</button>
@@ -96,12 +140,19 @@
 
         <!-- 右侧内容显示区 -->
         <div class="content">
+            <div id="private-mode-toggle">🚀 项目启动器</div>
+            <div id="project-launcher">
+                <h3>私有项目启动器</h3>
+                <div id="project-list"></div>
+                <button id="add-project-btn">+ 添加新项目</button>
+            </div>
             <iframe name="content_frame" id="content_frame" src="https://cn.bing.com"></iframe>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // DOM 元素获取
             const container = document.getElementById('link-container');
             const iframe = document.getElementById('content_frame');
             const sidebar = document.getElementById('sidebar');
@@ -111,106 +162,238 @@
             const importBtn = document.getElementById('import-btn');
             const exportBtn = document.getElementById('export-btn');
             const importFile = document.getElementById('import-file');
+            const importTextBtn = document.getElementById('import-text-btn');
+            const exportTextBtn = document.getElementById('export-text-btn');
+            const categorySelect = document.getElementById('link-category-select');
+            const newCategoryInput = document.getElementById('new-category-input');
+            const projectLauncher = document.getElementById('project-launcher');
+            const privateModeToggle = document.getElementById('private-mode-toggle');
+            const projectList = document.getElementById('project-list');
+            const addProjectBtn = document.getElementById('add-project-btn');
+            const workspaceSelect = document.getElementById('workspace-select');
+            const addWorkspaceBtn = document.getElementById('add-workspace-btn');
+            const renameWorkspaceBtn = document.getElementById('rename-workspace-btn');
+            const deleteWorkspaceBtn = document.getElementById('delete-workspace-btn');
 
-            let linksData = [];
+            // 状态变量
+            let allData = {};
             let currentActiveLink = null;
+            let draggedItem = { fromCatIndex: -1, fromLinkIndex: -1 };
 
-            const defaultLinks = [
-              { "category": "灵感与洞察", "links": [ { "name": "Product Hunt", "url": "https://www.producthunt.com/", "external": true }, { "name": "Hacker News", "url": "https://news.ycombinator.com/show" }, ] },
-              { "category": "开发与构建", "links": [ { "name": "GitHub", "url": "https://github.com/", "external": true }, { "name": "Godot Engine", "url": "https://godotengine.org/" } ] }
-            ];
+            const defaultData = {
+                workspaces: [
+                    { 
+                        name: "默认工作区",
+                        links: [
+                            { "category": "灵感与洞察", "links": [ { "name": "Product Hunt", "url": "https://www.producthunt.com/", "external": true }, { "name": "Hacker News", "url": "https://news.ycombinator.com/show" } ] }
+                        ]
+                    }
+                ],
+                projects: [
+                    { name: "我的第一个工具", docPath: "C:\\Users\\YourName\\Documents\\Tool1", codePath: "D:\\Projects\\Tool1" }
+                ],
+                currentWorkspaceIndex: 0
+            };
 
             // --- 数据处理 ---
             function loadData() {
-                const storedData = localStorage.getItem('dashboardLinks');
-                linksData = storedData ? JSON.parse(storedData) : defaultLinks;
-                renderLinks();
+                const storedData = localStorage.getItem('dashboardConfig');
+                allData = storedData ? JSON.parse(storedData) : defaultData;
+                if (!allData.workspaces || allData.workspaces.length === 0) {
+                    allData.workspaces = defaultData.workspaces;
+                    allData.currentWorkspaceIndex = 0;
+                }
+                if (allData.currentWorkspaceIndex >= allData.workspaces.length) {
+                    allData.currentWorkspaceIndex = 0;
+                }
+                
+                const launcherVisible = localStorage.getItem('dashboardLauncherVisible') === 'true';
+                if (launcherVisible) projectLauncher.classList.add('visible');
+
+                render();
             }
 
             function saveData() {
-                localStorage.setItem('dashboardLinks', JSON.stringify(linksData));
-                renderLinks();
+                localStorage.setItem('dashboardConfig', JSON.stringify(allData));
+                render();
             }
             
             function exportData() {
-                const dataStr = JSON.stringify(linksData, null, 2);
-                const blob = new Blob([dataStr], {type: 'application/json'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'dashboard-links.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                return JSON.stringify(allData, null, 2);
+            }
+
+            function importData(dataStr) {
+                try {
+                    const importedData = JSON.parse(dataStr);
+                    if (importedData && typeof importedData === 'object' && importedData.workspaces) {
+                        allData = importedData;
+                        saveData();
+                        alert('配置导入成功！');
+                    } else {
+                        throw new Error('JSON文件格式不正确。');
+                    }
+                } catch (error) {
+                    alert(`导入失败: ${error.message}`);
+                }
             }
 
             // --- 渲染 ---
-            function renderLinks() {
+            function render() {
+                renderWorkspaceSwitcher();
+                renderCurrentWorkspaceLinks();
+                renderProjects();
+            }
+
+            function renderWorkspaceSwitcher() {
+                workspaceSelect.innerHTML = '';
+                allData.workspaces.forEach((ws, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = ws.name;
+                    if (index === allData.currentWorkspaceIndex) {
+                        option.selected = true;
+                    }
+                    workspaceSelect.appendChild(option);
+                });
+            }
+
+            function renderCurrentWorkspaceLinks() {
+                const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                if (!currentWorkspace) return;
+
                 container.innerHTML = '';
-                linksData.forEach((cat, catIndex) => {
+                (currentWorkspace.links || []).forEach((cat, catIndex) => {
                     const categoryDiv = document.createElement('div');
                     categoryDiv.className = 'link-category';
-
                     const categoryTitle = document.createElement('h2');
                     categoryTitle.textContent = cat.category;
                     categoryDiv.appendChild(categoryTitle);
-
                     const linkList = document.createElement('ul');
                     cat.links.forEach((link, linkIndex) => {
                         const listItem = document.createElement('li');
-                        
+                        listItem.dataset.catIndex = catIndex;
+                        listItem.dataset.linkIndex = linkIndex;
+                        listItem.draggable = true;
+                        listItem.addEventListener('dragstart', handleDragStart);
+                        listItem.addEventListener('dragover', handleDragOver);
+                        listItem.addEventListener('dragleave', handleDragLeave);
+                        listItem.addEventListener('drop', handleDrop);
+                        listItem.addEventListener('dragend', handleDragEnd);
                         const linkAnchor = document.createElement('a');
                         linkAnchor.href = link.url;
                         linkAnchor.innerHTML = link.external ? `${link.name} <span class="external-icon">↗</span>` : link.name;
                         linkAnchor.addEventListener('click', (e) => handleLinkClick(e, link, linkAnchor));
-                        
+                        const dragHandle = document.createElement('span');
+                        dragHandle.className = 'drag-handle';
+                        dragHandle.innerHTML = '&#9776;';
+                        listItem.appendChild(dragHandle);
                         listItem.appendChild(linkAnchor);
-                        
-                        const editControls = document.createElement('div');
-                        editControls.className = 'edit-controls';
-
-                        const toggleLabel = document.createElement('label');
-                        toggleLabel.className = 'toggle-switch';
-                        const toggleInput = document.createElement('input');
-                        toggleInput.type = 'checkbox';
-                        toggleInput.checked = link.external || false;
-                        toggleInput.addEventListener('change', () => {
-                            link.external = toggleInput.checked;
-                            saveData();
-                        });
-                        toggleLabel.append(toggleInput, document.createElement('span'));
-                        toggleLabel.querySelector('span').className = 'slider';
-
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.innerHTML = '×';
-                        deleteBtn.className = 'delete-btn';
-                        deleteBtn.title = '删除链接';
-                        deleteBtn.addEventListener('click', () => {
-                            // 使用浏览器的 confirm 对话框进行确认
-                            if (window.confirm(`确定要删除 "${link.name}" 吗？`)) {
-                                cat.links.splice(linkIndex, 1);
-                                if (cat.links.length === 0) {
-                                    linksData.splice(catIndex, 1);
-                                }
-                                saveData();
-                            }
-                        });
-
-                        editControls.append(toggleLabel, deleteBtn);
+                        const editControls = createEditControls(link, catIndex, linkIndex);
                         listItem.appendChild(editControls);
                         linkList.appendChild(listItem);
                     });
                     categoryDiv.appendChild(linkList);
                     container.appendChild(categoryDiv);
                 });
+                updateCategoryDropdown();
+            }
+
+            function renderProjects() {
+                projectList.innerHTML = '';
+                (allData.projects || []).forEach((proj, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'project-item';
+                    
+                    itemDiv.innerHTML = `
+                        <div class="project-header">
+                            <input type="text" class="project-name-input" value="${proj.name}" data-index="${index}" placeholder="项目名称">
+                            <button class="control-btn delete-btn delete-project-btn" data-index="${index}" title="删除项目">×</button>
+                        </div>
+                        <div class="path-group">
+                            <span>文档</span>
+                            <input type="text" class="project-doc-path" value="${proj.docPath}" data-index="${index}" placeholder="文档文件夹路径">
+                            <button class="copy-btn" data-target="doc" data-index="${index}">复制</button>
+                        </div>
+                        <div class="path-group">
+                            <span>代码</span>
+                            <input type="text" class="project-code-path" value="${proj.codePath}" data-index="${index}" placeholder="代码文件夹路径">
+                            <button class="copy-btn" data-target="code" data-index="${index}">复制</button>
+                        </div>
+                    `;
+                    projectList.appendChild(itemDiv);
+                });
+
+                projectList.querySelectorAll('.project-name-input, .project-doc-path, .project-code-path').forEach(input => {
+                    input.addEventListener('change', updateProjectData);
+                });
+                projectList.querySelectorAll('.delete-project-btn').forEach(btn => btn.addEventListener('click', deleteProject));
+                projectList.querySelectorAll('.copy-btn').forEach(btn => btn.addEventListener('click', copyPath));
+            }
+
+            function createEditControls(link, catIndex, linkIndex) {
+                const editControls = document.createElement('div');
+                editControls.className = 'edit-controls';
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '✏️';
+                editBtn.className = 'control-btn edit-btn';
+                editBtn.title = '编辑链接';
+                editBtn.addEventListener('click', () => handleEditLink(link, catIndex, linkIndex));
+                const toggleLabel = document.createElement('label');
+                toggleLabel.className = 'toggle-switch';
+                const toggleInput = document.createElement('input');
+                toggleInput.type = 'checkbox';
+                toggleInput.checked = link.external || false;
+                toggleInput.addEventListener('change', () => {
+                    link.external = toggleInput.checked;
+                    saveData();
+                });
+                const slider = document.createElement('span');
+                slider.className = 'slider';
+                toggleLabel.append(toggleInput, slider);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '×';
+                deleteBtn.className = 'control-btn delete-btn';
+                deleteBtn.title = '删除链接';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`确定要删除 "${link.name}" 吗？`)) {
+                        allData.workspaces[allData.currentWorkspaceIndex].links[catIndex].links.splice(linkIndex, 1);
+                        if (allData.workspaces[allData.currentWorkspaceIndex].links[catIndex].links.length === 0) {
+                            allData.workspaces[allData.currentWorkspaceIndex].links.splice(catIndex, 1);
+                        }
+                        saveData();
+                    }
+                });
+                editControls.append(editBtn, toggleLabel, deleteBtn);
+                return editControls;
+            }
+
+            function updateCategoryDropdown() {
+                const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                categorySelect.innerHTML = '';
+                if (!currentWorkspace) return;
+
+                const links = currentWorkspace.links || [];
+
+                links.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.category;
+                    option.textContent = cat.category;
+                    categorySelect.appendChild(option);
+                });
+                const newOption = document.createElement('option');
+                newOption.value = '__addNew__';
+                newOption.textContent = '-- 添加新分类 --';
+                categorySelect.appendChild(newOption);
+
+                // Fix: Manually trigger visibility check after rendering the dropdown
+                newCategoryInput.style.display = categorySelect.value === '__addNew__' ? 'block' : 'none';
             }
             
             // --- 事件处理 ---
             function handleLinkClick(event, link, element) {
                 event.preventDefault();
+                if (sidebar.classList.contains('edit-mode')) return;
                 if (currentActiveLink) currentActiveLink.classList.remove('active');
-                
                 if (link.external) {
                     window.open(link.url, '_blank', 'noopener,noreferrer');
                     iframe.src = `data:text/html,<body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 90vh; color: #888; text-align: center;"><h1>'${link.name}'<br/>已在新标签页中打开</h1></body>`;
@@ -220,69 +403,200 @@
                     currentActiveLink = element;
                 }
             }
+            
+            function handleEditLink(link, catIndex, linkIndex) {
+                const newName = prompt("输入新的链接名称:", link.name);
+                if (newName === null || newName.trim() === '') return;
+                const newUrl = prompt("输入新的链接 URL:", link.url);
+                if (newUrl === null || newUrl.trim() === '') return;
+                allData.workspaces[allData.currentWorkspaceIndex].links[catIndex].links[linkIndex].name = newName.trim();
+                allData.workspaces[allData.currentWorkspaceIndex].links[catIndex].links[linkIndex].url = newUrl.trim();
+                saveData();
+            }
 
+            function handleDragStart(e) { this.classList.add('dragging'); draggedItem.fromCatIndex = parseInt(this.dataset.catIndex); draggedItem.fromLinkIndex = parseInt(this.dataset.linkIndex); }
+            function handleDragOver(e) { e.preventDefault(); this.classList.add('drag-over'); }
+            function handleDragLeave(e) { this.classList.remove('drag-over'); }
+            function handleDrop(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                const toCatIndex = parseInt(this.dataset.catIndex);
+                const toLinkIndex = parseInt(this.dataset.linkIndex);
+                const links = allData.workspaces[allData.currentWorkspaceIndex].links;
+                const itemToMove = links[draggedItem.fromCatIndex].links.splice(draggedItem.fromLinkIndex, 1)[0];
+                links[toCatIndex].links.splice(toLinkIndex, 0, itemToMove);
+                if (links[draggedItem.fromCatIndex].links.length === 0) {
+                    links.splice(draggedItem.fromCatIndex, 1);
+                }
+                saveData();
+            }
+            function handleDragEnd(e) { this.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')); }
+
+            // 工作区事件
+            workspaceSelect.addEventListener('change', (e) => {
+                allData.currentWorkspaceIndex = parseInt(e.target.value);
+                saveData();
+            });
+
+            addWorkspaceBtn.addEventListener('click', () => {
+                const name = prompt("输入新工作区的名称:");
+                if (name && name.trim()) {
+                    allData.workspaces.push({ name: name.trim(), links: [] });
+                    allData.currentWorkspaceIndex = allData.workspaces.length - 1;
+                    saveData();
+                }
+            });
+
+            renameWorkspaceBtn.addEventListener('click', () => {
+                const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                const newName = prompt("输入新的名称:", currentWorkspace.name);
+                if (newName && newName.trim()) {
+                    currentWorkspace.name = newName.trim();
+                    saveData();
+                }
+            });
+
+            deleteWorkspaceBtn.addEventListener('click', () => {
+                if (allData.workspaces.length <= 1) {
+                    alert("不能删除最后一个工作区！");
+                    return;
+                }
+                const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                if (confirm(`确定要删除工作区 "${currentWorkspace.name}" 吗？此操作不可撤销！`)) {
+                    allData.workspaces.splice(allData.currentWorkspaceIndex, 1);
+                    allData.currentWorkspaceIndex = 0;
+                    saveData();
+                }
+            });
+
+            // 项目启动器事件
+            privateModeToggle.addEventListener('click', () => {
+                projectLauncher.classList.toggle('visible');
+                localStorage.setItem('dashboardLauncherVisible', projectLauncher.classList.contains('visible'));
+            });
+
+            addProjectBtn.addEventListener('click', () => {
+                if (!allData.projects) allData.projects = [];
+                allData.projects.push({ name: "新项目", docPath: "", codePath: "" });
+                saveData();
+            });
+            
+            function updateProjectData(e) {
+                const index = e.target.dataset.index;
+                if (e.target.classList.contains('project-name-input')) {
+                    allData.projects[index].name = e.target.value;
+                } else if (e.target.classList.contains('project-doc-path')) {
+                    allData.projects[index].docPath = e.target.value;
+                } else if (e.target.classList.contains('project-code-path')) {
+                    allData.projects[index].codePath = e.target.value;
+                }
+                saveData();
+            }
+
+            function deleteProject(e) {
+                const index = e.target.dataset.index;
+                if (confirm(`确定要删除项目 "${allData.projects[index].name}" 吗？`)) {
+                    allData.projects.splice(index, 1);
+                    saveData();
+                }
+            }
+
+            function copyPath(e) {
+                const index = e.target.dataset.index;
+                const target = e.target.dataset.target;
+                const path = (target === 'doc') ? allData.projects[index].docPath : allData.projects[index].codePath;
+                if (!path) { alert("路径为空，无法复制！"); return; }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(path).then(() => alert('路径已复制到剪贴板！')).catch(err => alert('复制失败!'));
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = path;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try { document.execCommand('copy'); alert('路径已复制到剪贴板！'); } catch (err) { alert('复制失败!'); }
+                    document.body.removeChild(textArea);
+                }
+            }
+
+            // 表单和按钮事件
             editModeToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('edit-mode');
                 const isActive = sidebar.classList.contains('edit-mode');
                 editModeToggle.textContent = isActive ? '完成编辑' : '进入编辑模式';
                 editModeToggle.classList.toggle('active', isActive);
                 addLinkForm.style.display = isActive ? 'block' : 'none';
+                if (!isActive) { addLinkForm.reset(); newCategoryInput.style.display = 'none'; }
+            });
+
+            categorySelect.addEventListener('change', () => {
+                newCategoryInput.style.display = categorySelect.value === '__addNew__' ? 'block' : 'none';
             });
 
             addLinkForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const name = document.getElementById('link-name').value;
-                const url = document.getElementById('link-url').value;
-                const category = document.getElementById('link-category').value;
-
-                let categoryExists = linksData.find(c => c.category === category);
+                const name = document.getElementById('link-name').value.trim();
+                const url = document.getElementById('link-url').value.trim();
+                let category = categorySelect.value;
+                if (category === '__addNew__') {
+                    category = newCategoryInput.value.trim();
+                    if (category === '') { alert("新分类名称不能为空！"); return; }
+                }
+                if (!name || !url || !category) { alert("请填写所有字段！"); return; }
+                
+                const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                let categoryExists = currentWorkspace.links.find(c => c.category === category);
                 if (categoryExists) {
                     categoryExists.links.push({ name, url, external: false });
                 } else {
-                    linksData.push({ category, links: [{ name, url, external: false }] });
+                    currentWorkspace.links.push({ category, links: [{ name, url, external: false }] });
                 }
                 saveData();
                 addLinkForm.reset();
+                newCategoryInput.style.display = 'none';
             });
 
-            cancelAddBtn.addEventListener('click', () => {
-                addLinkForm.reset();
-                addLinkForm.style.display = 'none';
-                sidebar.classList.remove('edit-mode');
-                editModeToggle.textContent = '进入编辑模式';
-                editModeToggle.classList.remove('active');
+            cancelAddBtn.addEventListener('click', () => { addLinkForm.reset(); newCategoryInput.style.display = 'none'; });
+            
+            exportBtn.addEventListener('click', () => {
+                const dataStr = exportData();
+                const blob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dashboard-config.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+            exportTextBtn.addEventListener('click', () => {
+                const dataStr = exportData();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(dataStr).then(() => alert('配置已复制到剪贴板！'));
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = dataStr;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert('配置已复制到剪贴板！');
+                }
             });
             
-            exportBtn.addEventListener('click', exportData);
-            
-            importBtn.addEventListener('click', () => {
-                importFile.click();
-            });
-
+            importBtn.addEventListener('click', () => importFile.click());
             importFile.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        if (Array.isArray(importedData)) {
-                            linksData = importedData;
-                            saveData();
-                            alert('配置导入成功！');
-                        } else {
-                            throw new Error('JSON文件格式不正确。');
-                        }
-                    } catch (error) {
-                        alert(`导入失败: ${error.message}`);
-                    }
-                };
-                reader.onerror = () => {
-                    alert('读取文件失败！');
-                };
+                reader.onload = (e) => importData(e.target.result);
                 reader.readAsText(file);
                 importFile.value = '';
+            });
+
+            importTextBtn.addEventListener('click', () => {
+                const textData = prompt("请在此处粘贴您的配置文本:");
+                if (textData) {
+                    importData(textData);
+                }
             });
 
             // --- 初始化 ---
