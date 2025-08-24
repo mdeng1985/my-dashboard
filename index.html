@@ -7,8 +7,8 @@
     <style>
         /* 基础样式 */
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; color: #333; }
-        .container { display: flex; height: 100vh; }
-        .sidebar { width: 280px; background-color: #ffffff; border-right: 1px solid #e0e0e0; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .container { display: flex; height: 100vh; position: relative; overflow-x: hidden; }
+        .sidebar { width: 280px; background-color: #ffffff; border-right: 1px solid #e0e0e0; padding: 20px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 200; }
         .sidebar-header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
         .sidebar-header h1 { font-size: 24px; margin: 0; color: #1a73e8; }
         .sidebar-content { flex-grow: 1; }
@@ -84,6 +84,57 @@
         #add-project-btn { width: 100%; margin-top: 10px; padding: 8px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
 
         #private-mode-toggle { position: absolute; top: 50%; transform: translateY(-50%); left: 0; z-index: 101; background: #fff; border: 1px solid #ccc; border-left: none; writing-mode: vertical-rl; text-orientation: mixed; padding: 8px 4px; border-radius: 0 8px 8px 0; cursor: pointer; font-size: 12px; color: #666; }
+
+        /* 移动端响应式样式 */
+        #menu-toggle { display: none; }
+        .overlay { display: none; }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                height: 100%;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+            }
+            .sidebar.visible {
+                transform: translateX(0);
+            }
+            .content {
+                width: 100%;
+            }
+            #menu-toggle {
+                display: block;
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                z-index: 300;
+                background: #fff;
+                border: 1px solid #ccc;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                font-size: 24px;
+                line-height: 40px;
+                text-align: center;
+                cursor: pointer;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            .overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.4);
+                z-index: 199;
+            }
+            .overlay.visible {
+                display: block;
+            }
+            #project-launcher {
+                width: calc(100vw - 40px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -140,6 +191,8 @@
 
         <!-- 右侧内容显示区 -->
         <div class="content">
+            <div id="menu-toggle">☰</div>
+            <div id="overlay" class="overlay"></div>
             <div id="private-mode-toggle">🚀 项目启动器</div>
             <div id="project-launcher">
                 <h3>私有项目启动器</h3>
@@ -174,6 +227,8 @@
             const addWorkspaceBtn = document.getElementById('add-workspace-btn');
             const renameWorkspaceBtn = document.getElementById('rename-workspace-btn');
             const deleteWorkspaceBtn = document.getElementById('delete-workspace-btn');
+            const menuToggle = document.getElementById('menu-toggle');
+            const overlay = document.getElementById('overlay');
 
             // 状态变量
             let allData = {};
@@ -385,7 +440,6 @@
                 newOption.textContent = '-- 添加新分类 --';
                 categorySelect.appendChild(newOption);
 
-                // Fix: Manually trigger visibility check after rendering the dropdown
                 newCategoryInput.style.display = categorySelect.value === '__addNew__' ? 'block' : 'none';
             }
             
@@ -401,6 +455,12 @@
                     iframe.src = link.url;
                     element.classList.add('active');
                     currentActiveLink = element;
+                }
+
+                // 在移动端，点击链接后自动收起侧边栏
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('visible');
+                    overlay.classList.remove('visible');
                 }
             }
             
@@ -532,18 +592,21 @@
                 newCategoryInput.style.display = categorySelect.value === '__addNew__' ? 'block' : 'none';
             });
 
+
+
             addLinkForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const name = document.getElementById('link-name').value.trim();
                 const url = document.getElementById('link-url').value.trim();
                 let category = categorySelect.value;
-                if (category === '__addNew__') {
+                if (categorySelect.value === '__addNew__') {
                     category = newCategoryInput.value.trim();
                     if (category === '') { alert("新分类名称不能为空！"); return; }
                 }
                 if (!name || !url || !category) { alert("请填写所有字段！"); return; }
                 
                 const currentWorkspace = allData.workspaces[allData.currentWorkspaceIndex];
+                if (!currentWorkspace.links) currentWorkspace.links = [];
                 let categoryExists = currentWorkspace.links.find(c => c.category === category);
                 if (categoryExists) {
                     categoryExists.links.push({ name, url, external: false });
@@ -597,6 +660,17 @@
                 if (textData) {
                     importData(textData);
                 }
+            });
+
+            // 移动端菜单事件
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('visible');
+                overlay.classList.toggle('visible');
+            });
+
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('visible');
+                overlay.classList.remove('visible');
             });
 
             // --- 初始化 ---
